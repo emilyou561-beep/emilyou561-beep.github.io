@@ -59,6 +59,8 @@ body.on.home .tag.show{opacity:1}
 .tag span{width:1px;height:16px;background:linear-gradient(rgba(255,79,200,.6),transparent)}
 .tip{position:fixed;z-index:16;pointer-events:none;font:12px var(--m);color:var(--ink);background:rgba(8,9,10,.85);border:1px solid var(--line);padding:5px 9px;border-radius:6px;opacity:0;transition:opacity .15s;white-space:nowrap}
 .tip.show{opacity:1}
+.say{position:fixed;left:0;top:0;z-index:16;margin:0;pointer-events:none;max-width:260px;text-align:center;font:500 22px/1.15 'Caveat',cursive;color:#ffe3f6;text-shadow:0 0 6px #ff4fc8,0 0 18px #ff2fae;opacity:0;transition:opacity .5s}
+.say.show{opacity:1}
 
 /* pages laid onto screens */
 .page{position:fixed;z-index:18;opacity:0;visibility:hidden;transition:opacity .45s,visibility 0s .45s;color:var(--ink)}
@@ -196,6 +198,7 @@ body.flat #about .journal{height:auto}
 <div class="tag" id="tag-experience"><button data-go="experience">Experience</button><span></span></div>
 <div class="tag" id="tag-about"><button data-go="about">About me</button><span></span></div>
 <div class="tip" id="tip"></div>
+<p class="say" id="say">I’m waiting for a chance to put my ambition to work.</p>
 
 <section class="page screen sheet" id="projects" aria-label="Projects"></section>
 <section class="page screen sheet" id="experience" aria-label="Experience"></section>
@@ -208,6 +211,6 @@ body.flat #about .journal{height:auto}
 
 <div id="boot" role="button" tabindex="0" aria-label="Power on"><pre id="bootTxt"></pre></div>
 
-<script type="module" src="./app.js?v=5"></script>
+<script type="module" src="./app.js?v=8"></script>
 </body>
 </html>

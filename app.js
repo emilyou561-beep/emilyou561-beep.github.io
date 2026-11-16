@@ -1,7 +1,7 @@
 // Emily Ou — a late-night desk.
 // The scene is modelled in code below; the words come from content.js.
 
-import * as C from './content.js?v=5'
+import * as C from './content.js?v=8'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -502,7 +502,6 @@ async function buildScene() {
     fans.push(blades)
   }
   const pcGlow = lit(new THREE.PointLight(0xb05cff, 0.6, 1.4, 2)); pcGlow.position.set(-0.6, 1.0, 0.45); scene.add(pcGlow)
-  hit(pc, 'pc', 'The rig')
 
   /* ---- #63, a little black race car */
   const car = new THREE.Group(); car.position.set(0.4, 0.75, 0.66); car.rotation.y = 0.55; scene.add(car)
@@ -538,7 +537,7 @@ async function buildScene() {
   hit(sw, 'switch', 'Stardew Valley, my favorite game for now')
 
   /* ---- neon sign on the wall (neonArt.js) */
-  const { drawNeonSign } = await import('./neonArt.js?v=5')
+  const { drawNeonSign } = await import('./neonArt.js?v=8')
   const neonTex = ctex(1200, 800, drawNeonSign)
   const neon = new THREE.Group(); neon.position.set(-1.42, 1.78, 0.03); neon.scale.setScalar(1.25); scene.add(neon)
   add(neon, rbox(0.68, 0.46, 0.008, 0.003, new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.15, transparent: true, opacity: 0.35 })), 0, 0, -0.008)
@@ -546,18 +545,20 @@ async function buildScene() {
   const neonMat = glow(new THREE.MeshBasicMaterial({ map: neonTex, transparent: true, depthWrite: false, color: new THREE.Color(1.7, 1.7, 1.7) }))
   add(neon, new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.427), neonMat), 0, 0, 0.002)
   const neonLight = lit(new THREE.RectAreaLight(0xff3fb4, 4, 0.6, 0.4)); neonLight.width = 0.75; neonLight.height = 0.5; neonLight.position.set(-1.42, 1.78, 0.05); neonLight.lookAt(-1.42, 1.7, 2); scene.add(neonLight)
-  hit(neon, 'neon', 'Finding a job')
+  hit(neon, 'neon', '')
 
   /* ---- tennis racket + ball */
   const strings = ctex(256, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(225,228,232,.9)'; g.lineWidth = 2; for (let i = 8; i < w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke() } })
-  const racket = new THREE.Group(); racket.position.set(1.16, 0.615, 0.6); racket.rotation.set(0, -0.2, Math.PI - 0.16); scene.add(racket)
+  // head down on the floor, handle resting against the front edge of the nightstand
+  const rackOuter = new THREE.Group(); rackOuter.position.set(1.4, 0, 0.625); rackOuter.rotation.set(-0.25, 0, 0); scene.add(rackOuter)
+  const racket = new THREE.Group(); racket.position.y = 0.632; racket.rotation.z = Math.PI; rackOuter.add(racket)
   add(racket, new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.016, 0.2, 12), std(0x1a1b1e, 0.9)), 0, 0.1, 0)
   for (const s of [-1, 1]) { const th = add(racket, new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 8), M.black), s * 0.028, 0.27, 0); th.rotation.z = -s * 0.33 }
   const head = add(racket, new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.011, 10, 48), std(0x111214, 0.35, 0.4)), 0, 0.47, 0); head.scale.set(1, 1.3, 1)
   add(racket, new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.0035, 6, 48), std(0xc9ced3, 0.4, 0.6)), 0, 0.47, 0.009).scale.set(1, 1.3, 1)
   const net = add(racket, new THREE.Mesh(new THREE.CircleGeometry(0.11, 40), new THREE.MeshStandardMaterial({ map: strings, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.6 })), 0, 0.47, 0); net.scale.set(1, 1.3, 1)
   racket.traverse((o) => (o.castShadow = true))
-  hit(racket, 'racket', 'Tennis, my favorite sport')
+  hit(rackOuter, 'racket', 'Tennis, my favorite sport')
   const ball = add(scene, new THREE.Mesh(new THREE.SphereGeometry(0.033, 24, 16), std(0xc8dc3c, 0.95)), 1.0, 0.033, 1.05); ball.castShadow = true
   hit(ball, 'ball', 'Tennis ball')
 
@@ -739,7 +740,7 @@ async function buildScene() {
       const o = pick(e)
       hovered = o
       canvas.classList.toggle('hover', !!o)
-      if (o && page === 'home' || (o && o.userData.hit.kind === 'photo' && page === 'about')) {
+      if (o && o.userData.hit.label && (page === 'home' || (o.userData.hit.kind === 'photo' && page === 'about'))) {
         tip.textContent = o.userData.hit.label; tip.style.left = e.clientX + 14 + 'px'; tip.style.top = e.clientY + 14 + 'px'; tip.classList.add('show')
       } else tip.classList.remove('show')
     }
@@ -762,8 +763,10 @@ async function buildScene() {
 
   /* ---- little things to click */
   const anim = { car: -1, ball: -1, cup: 0 }
+  const say = { el: $('#say'), timer: 0 }
   function egg(k) {
     if (k === 'car') anim.car = 0
+    if (k === 'neon') { say.el.classList.add('show'); clearTimeout(say.timer); say.timer = setTimeout(() => say.el.classList.remove('show'), 5000) }
     if (k === 'ball' || k === 'racket') anim.ball = 0
   }
 
@@ -840,6 +843,9 @@ async function buildScene() {
       if (page === 'experience') placeOn(el, sideScreen, 10, 15, 42)
       if (settled || cam.pos.distanceTo(gp) < 0.15) el.classList.add('show')
     }
+    proj.set(-1.42, 1.44, 0.05).project(camera)
+    say.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * innerWidth}px,${(-proj.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,0)`
+    if (page !== 'home') say.el.classList.remove('show')
     for (const tg of tags) {
       proj.copy(tg.at).project(camera)
       tg.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * innerWidth}px,${(-proj.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,-100%)`
