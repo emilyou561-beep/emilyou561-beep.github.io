@@ -136,9 +136,6 @@ body.on.home .tag.show{opacity:1}
 .lb img{max-width:92vw;max-height:80vh;border:10px solid #f2f0ec;border-bottom-width:12px;box-shadow:0 20px 60px #000}
 .lb figcaption{font:500 26px 'Caveat',cursive;color:#f2f0ec}
 .lb .ib{position:absolute;top:16px;right:16px;width:44px;height:44px;background:#111}
-.toast{position:fixed;left:50%;bottom:70px;transform:translate(-50%,20px);z-index:30;background:rgba(10,11,13,.95);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:14px;max-width:min(420px,90vw);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;display:flex;gap:12px;align-items:center}
-.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-.toast button{font:500 13px var(--f);background:var(--ink);color:#0b0c0e;padding:7px 12px;border-radius:6px;white-space:nowrap}
 
 /* boot screen */
 #boot{position:fixed;inset:0;z-index:50;background:#000;color:#cfd6d4;font:14px/1.7 var(--m);padding:max(6vh,28px) max(6vw,22px);cursor:pointer;transition:opacity 1.1s}
@@ -205,13 +202,12 @@ body.flat #about .journal{height:auto}
 <section class="page" id="about" aria-label="About"></section>
 
 <button class="back" id="back" data-go="home">← Back to the desk</button>
-<button class="rainbtn" id="rain" aria-pressed="true">Rain · on</button>
+<button class="rainbtn" id="rain" aria-pressed="true">Sound · on</button>
 
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo"><button class="ib" id="lbx" aria-label="Close">✕</button><figure><img id="lbimg" alt=""><figcaption id="lbcap"></figcaption></figure></div>
-<div class="toast" id="toast" role="status"></div>
 
 <div id="boot" role="button" tabindex="0" aria-label="Power on"><pre id="bootTxt"></pre></div>
 
-<script type="module" src="./app.js?v=4"></script>
+<script type="module" src="./app.js?v=5"></script>
 </body>
 </html>

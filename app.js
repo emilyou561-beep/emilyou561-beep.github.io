@@ -1,7 +1,7 @@
 // Emily Ou — a late-night desk.
 // The scene is modelled in code below; the words come from content.js.
 
-import * as C from './content.js?v=4'
+import * as C from './content.js?v=5'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -75,15 +75,6 @@ function openPhoto(i) {
 }
 const closePhoto = () => $('#lb').classList.remove('show')
 
-let toastTimer
-function toast(text, action) {
-  const t = $('#toast')
-  t.innerHTML = `<span>${esc(text)}</span>${action ? `<button>${esc(action.label)}</button>` : ''}`
-  if (action) t.querySelector('button').onclick = () => { t.classList.remove('show'); action.run() }
-  t.classList.add('show')
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => t.classList.remove('show'), 5200)
-}
 
 renderProjects()
 renderExperience()
@@ -162,24 +153,25 @@ window.addEventListener('keydown', (e) => { if (!started && e.key !== 'Tab') req
 
 let powerOn = () => {}
 
-/* ---- rain: generated white noise, no audio file */
+/* ---- sound: rain and key clicks, generated live (no audio files) */
 const rain = (() => {
-  let ctx, master, on = true
-  try { on = localStorage.getItem('rain') !== 'off' } catch {}
+  let ctx, master, rainBus, buf, on = true
+  try { on = localStorage.getItem('sound') !== 'off' && localStorage.getItem('rain') !== 'off' } catch {}
   const btn = document.getElementById('rain')
-  const label = () => { btn.textContent = on ? 'Rain · on' : 'Rain · off'; btn.setAttribute('aria-pressed', String(on)) }
+  const label = () => { btn.textContent = on ? 'Sound · on' : 'Sound · off'; btn.setAttribute('aria-pressed', String(on)) }
   label()
   function build() {
     ctx = new (window.AudioContext || window.webkitAudioContext)()
     master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination)
-    const len = ctx.sampleRate * 4, buf = ctx.createBuffer(2, len, ctx.sampleRate)
+    rainBus = ctx.createGain(); rainBus.gain.value = 0.22; rainBus.connect(master)
+    const len = ctx.sampleRate * 4
+    buf = ctx.createBuffer(2, len, ctx.sampleRate)
     for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); let last = 0; for (let i = 0; i < len; i++) { const wn = Math.random() * 2 - 1; last = (last + 0.035 * wn) / 1.035; d[i] = last * 3.2 + wn * 0.18 } }
     const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400
     const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 180
     const body = ctx.createGain(); body.gain.value = 0.55
-    src.connect(hp).connect(lp).connect(body).connect(master); src.start()
-    // single drops on the window
+    src.connect(hp).connect(lp).connect(body).connect(rainBus); src.start()
     const drop = () => {
       if (ctx.state === 'running') {
         const n = ctx.createBufferSource(); n.buffer = buf
@@ -187,7 +179,7 @@ const rain = (() => {
         const g = ctx.createGain(), t = ctx.currentTime
         g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 + Math.random() * 0.3, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
         const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null
-        if (pan) { pan.pan.value = Math.random() * 2 - 1; n.connect(bp).connect(g).connect(pan).connect(master) } else n.connect(bp).connect(g).connect(master)
+        if (pan) { pan.pan.value = Math.random() * 2 - 1; n.connect(bp).connect(g).connect(pan).connect(rainBus) } else n.connect(bp).connect(g).connect(rainBus)
         n.start(t, Math.random() * 3, 0.06)
       }
       setTimeout(drop, 25 + Math.random() * 120)
@@ -198,10 +190,24 @@ const rain = (() => {
     if (!ctx) { if (!on) return; try { build() } catch { return } }
     if (ctx.state === 'suspended') ctx.resume().catch(() => {})
     master.gain.cancelScheduledValues(ctx.currentTime)
-    master.gain.setTargetAtTime(on ? 0.22 : 0, ctx.currentTime, 0.6)
+    master.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.5)
   }
-  btn.addEventListener('click', () => { on = !on; try { localStorage.setItem('rain', on ? 'on' : 'off') } catch {}; label(); apply() })
-  return { start: apply }
+  // a mechanical key: a short bright tick over a soft low thock
+  function click(big = false) {
+    if (!on || !ctx || ctx.state !== 'running') return
+    const t = ctx.currentTime, v = 0.8 + Math.random() * 0.4
+    const n = ctx.createBufferSource(); n.buffer = buf
+    const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = (big ? 2200 : 3200) * v; hp.Q.value = 1.4
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(big ? 0.9 : 0.55, t + 0.002); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
+    n.connect(hp).connect(ng).connect(master); n.start(t, Math.random() * 3, 0.04)
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime((big ? 140 : 210) * v, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.06)
+    const og = ctx.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(big ? 0.5 : 0.28, t + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, t + (big ? 0.12 : 0.07))
+    o.connect(og).connect(master); o.start(t); o.stop(t + 0.15)
+  }
+  btn.addEventListener('click', () => { on = !on; try { localStorage.setItem('sound', on ? 'on' : 'off'); localStorage.removeItem('rain') } catch {}; label(); apply(); click() })
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-go],[data-step],[data-photo],#lbx,.lnks a,.contact a')) click() }, true)
+  document.addEventListener('keydown', (e) => { if (started && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Escape')) click() })
+  return { start: () => { apply(); setTimeout(() => click(true), 30) }, click }
 })()
 
 function maybeStart() {
@@ -532,7 +538,7 @@ async function buildScene() {
   hit(sw, 'switch', 'Stardew Valley, my favorite game for now')
 
   /* ---- neon sign on the wall (neonArt.js) */
-  const { drawNeonSign } = await import('./neonArt.js?v=4')
+  const { drawNeonSign } = await import('./neonArt.js?v=5')
   const neonTex = ctex(1200, 800, drawNeonSign)
   const neon = new THREE.Group(); neon.position.set(-1.42, 1.78, 0.03); neon.scale.setScalar(1.25); scene.add(neon)
   add(neon, rbox(0.68, 0.46, 0.008, 0.003, new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.15, transparent: true, opacity: 0.35 })), 0, 0, -0.008)
@@ -746,6 +752,7 @@ async function buildScene() {
     const o = pick(e)
     if (!o) return
     const k = o.userData.hit.kind
+    rain.click()
     if (k === 'photo') return page === 'about' ? openPhoto(o.userData.photo) : go('about')
     if (PAGES.includes(k)) return go(k)
     if (page !== 'home') return
@@ -756,13 +763,8 @@ async function buildScene() {
   /* ---- little things to click */
   const anim = { car: -1, ball: -1, cup: 0 }
   function egg(k) {
-    if (k === 'car') { anim.car = 0; toast('#63 · George Russell is my favorite driver. Lights out and away we go.') }
-    if (k === 'ball' || k === 'racket') { anim.ball = 0; toast('Tennis is my favorite sport. Up for a hit in Ann Arbor?') }
-    if (k === 'switch') toast('Stardew Valley is my favorite game, for now.')
-    if (k === 'pc') toast('The rig. Yes, the fans match the desk.')
-    if (k === 'neon') toast('Yes, really. I’m looking for data analyst roles.', { label: 'See my experience', run: () => go('experience') })
-    if (k === 'window') toast('From Beijing, now between Chicago’s South Loop and Ann Arbor.')
-    if (k === 'headphones') toast('Lo-fi at low volume. Roommates are asleep.')
+    if (k === 'car') anim.car = 0
+    if (k === 'ball' || k === 'racket') anim.ball = 0
   }
 
   /* ---- tags pinned to objects */
