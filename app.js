@@ -1,7 +1,7 @@
 // Emily Ou — a late-night desk.
 // The scene is modelled in code below; the words come from content.js.
 
-import * as C from './content.js?v=8'
+import * as C from './content.js?v=9'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -365,7 +365,7 @@ async function buildScene() {
   const winGlow = lit(new THREE.RectAreaLight(0x6f86d8, 1.6, 1.3, 1.15)); winGlow.position.set(-2.37, 1.6, 1.25); winGlow.lookAt(0, 1.4, 1.25); scene.add(winGlow)
   const hits = []
   const hit = (obj, kind, label) => { obj.userData.hit = { kind, label }; hits.push(obj); return obj }
-  hit(win, 'window', 'Chicago, 1 a.m.')
+  hit(win, 'window', '')
 
   /* ---- desk */
   const desk = new THREE.Group(); scene.add(desk)
@@ -487,7 +487,6 @@ async function buildScene() {
   const band = add(hp, new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.012, 12, 40, Math.PI), M.soft), 0, 0.22, 0)
   for (const x of [-0.078, 0.078]) { const cup = add(hp, new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 32), M.soft), x, 0.2, 0); cup.rotation.z = Math.PI / 2; cup.castShadow = true }
   band.castShadow = true
-  hit(hp, 'headphones', 'Lo-fi, low volume')
 
   /* ---- PC tower */
   const pc = new THREE.Group(); pc.position.set(-0.78, 0.75, 0.38); scene.add(pc)
@@ -517,7 +516,7 @@ async function buildScene() {
   const wheels = []
   for (const [x, z] of [[0.055, 0.035], [0.055, -0.035], [-0.05, 0.035], [-0.05, -0.035]]) { const w = add(carBody, new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.014, 20), std(0x08080a, 0.8)), x, 0.014, z); w.rotation.x = Math.PI / 2; wheels.push(w) }
   carBody.traverse((o) => (o.castShadow = true))
-  hit(car, 'car', '#63')
+  hit(car, 'car', '')
 
   /* ---- handheld console, Stardew farm on screen */
   const sw = new THREE.Group(); sw.position.set(0.82, 0.75, 0.6); sw.rotation.y = 0.2; sw.scale.setScalar(1.35); scene.add(sw)
@@ -534,10 +533,10 @@ async function buildScene() {
   add(sw, rbox(0.05, 0.045, 0.008, 0.003, M.black), 0, 0.025, -0.035).rotation.x = -0.32
   const swLight = lit(new THREE.PointLight(0xc0a0ff, 0.25, 0.6, 2)); swLight.position.set(0.84, 0.85, 0.66); scene.add(swLight)
   sw.traverse((o) => (o.castShadow = true))
-  hit(sw, 'switch', 'Stardew Valley, my favorite game for now')
+  hit(sw, 'switch', '')
 
   /* ---- neon sign on the wall (neonArt.js) */
-  const { drawNeonSign } = await import('./neonArt.js?v=8')
+  const { drawNeonSign } = await import('./neonArt.js?v=9')
   const neonTex = ctex(1200, 800, drawNeonSign)
   const neon = new THREE.Group(); neon.position.set(-1.42, 1.78, 0.03); neon.scale.setScalar(1.25); scene.add(neon)
   add(neon, rbox(0.68, 0.46, 0.008, 0.003, new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.15, transparent: true, opacity: 0.35 })), 0, 0, -0.008)
@@ -558,9 +557,9 @@ async function buildScene() {
   add(racket, new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.0035, 6, 48), std(0xc9ced3, 0.4, 0.6)), 0, 0.47, 0.009).scale.set(1, 1.3, 1)
   const net = add(racket, new THREE.Mesh(new THREE.CircleGeometry(0.11, 40), new THREE.MeshStandardMaterial({ map: strings, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.6 })), 0, 0.47, 0); net.scale.set(1, 1.3, 1)
   racket.traverse((o) => (o.castShadow = true))
-  hit(rackOuter, 'racket', 'Tennis, my favorite sport')
+  hit(rackOuter, 'racket', '')
   const ball = add(scene, new THREE.Mesh(new THREE.SphereGeometry(0.033, 24, 16), std(0xc8dc3c, 0.95)), 1.0, 0.033, 1.05); ball.castShadow = true
-  hit(ball, 'ball', 'Tennis ball')
+  hit(ball, 'ball', '')
 
   /* ---- chair */
   const chair = new THREE.Group(); chair.position.set(-1.45, 0, 1.6); chair.rotation.y = -0.8; scene.add(chair)
@@ -763,10 +762,24 @@ async function buildScene() {
 
   /* ---- little things to click */
   const anim = { car: -1, ball: -1, cup: 0 }
-  const say = { el: $('#say'), timer: 0 }
+  // neon handwriting captions that appear when a thing on the desk is clicked
+  const say = { el: $('#say'), timer: 0, at: new V3(), below: true }
+  const LINES = {
+    neon: ['I’m waiting for a chance to put my ambition to work.', new V3(-1.42, 1.44, 0.05), true],
+    car: ['George Russell is my favorite driver.', new V3(0.4, 0.95, 0.66), false],
+    ball: ['Tennis is my favorite sport.', new V3(1.0, 0.5, 1.05), false],
+    racket: ['Tennis is my favorite sport.', new V3(1.4, 0.85, 0.6), false],
+    switch: ['Stardew Valley is my favorite game, for now.', new V3(0.82, 0.98, 0.6), false],
+    window: ['From Beijing. Living in Chicago’s South Loop and Ann Arbor.', new V3(-2.3, 0.92, 1.25), true],
+  }
+  function sayLine(k) {
+    const l = LINES[k]; if (!l) return
+    say.el.textContent = l[0]; say.at.copy(l[1]); say.below = l[2]
+    say.el.classList.add('show'); clearTimeout(say.timer); say.timer = setTimeout(() => say.el.classList.remove('show'), 5000)
+  }
   function egg(k) {
     if (k === 'car') anim.car = 0
-    if (k === 'neon') { say.el.classList.add('show'); clearTimeout(say.timer); say.timer = setTimeout(() => say.el.classList.remove('show'), 5000) }
+    sayLine(k)
     if (k === 'ball' || k === 'racket') anim.ball = 0
   }
 
@@ -843,8 +856,8 @@ async function buildScene() {
       if (page === 'experience') placeOn(el, sideScreen, 10, 15, 42)
       if (settled || cam.pos.distanceTo(gp) < 0.15) el.classList.add('show')
     }
-    proj.set(-1.42, 1.44, 0.05).project(camera)
-    say.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * innerWidth}px,${(-proj.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,0)`
+    proj.copy(say.at).project(camera)
+    say.el.style.transform = `translate(${Math.min(Math.max((proj.x * 0.5 + 0.5) * innerWidth, 140), innerWidth - 140)}px,${(-proj.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,${say.below ? '0' : '-100%'})`
     if (page !== 'home') say.el.classList.remove('show')
     for (const tg of tags) {
       proj.copy(tg.at).project(camera)
