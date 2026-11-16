@@ -58,7 +58,6 @@ function renderAbout() {
       <div class="hello"><img src="img/portrait.jpg" alt="Emily Ou"><h2>${esc(a.hello)}</h2></div>
       ${a.body.map((p) => `<p>${esc(p)}</p>`).join('')}
       <dl class="facts">${a.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
-      <p class="small">Photos on the wall · tap to open</p>
       <div class="thumbs">${C.photos.map((p, i) => `<button data-photo="${i}" aria-label="${esc(p.caption)}"><img src="img/thumbs/${p.id}.jpg" alt="${esc(p.caption)}" loading="lazy"></button>`).join('')}</div>
       <p class="small">Say hi</p>
       <div class="contact">${s.links.map((l) => `<a href="${l.href}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}<a href="mailto:${s.email}">Email</a></div>
@@ -162,12 +161,56 @@ $('#boot').addEventListener('click', requestStart)
 window.addEventListener('keydown', (e) => { if (!started && e.key !== 'Tab') requestStart() })
 
 let powerOn = () => {}
+
+/* ---- rain: generated white noise, no audio file */
+const rain = (() => {
+  let ctx, master, on = true
+  try { on = localStorage.getItem('rain') !== 'off' } catch {}
+  const btn = document.getElementById('rain')
+  const label = () => { btn.textContent = on ? 'Rain · on' : 'Rain · off'; btn.setAttribute('aria-pressed', String(on)) }
+  label()
+  function build() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)()
+    master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination)
+    const len = ctx.sampleRate * 4, buf = ctx.createBuffer(2, len, ctx.sampleRate)
+    for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); let last = 0; for (let i = 0; i < len; i++) { const wn = Math.random() * 2 - 1; last = (last + 0.035 * wn) / 1.035; d[i] = last * 3.2 + wn * 0.18 } }
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 180
+    const body = ctx.createGain(); body.gain.value = 0.55
+    src.connect(hp).connect(lp).connect(body).connect(master); src.start()
+    // single drops on the window
+    const drop = () => {
+      if (ctx.state === 'running') {
+        const n = ctx.createBufferSource(); n.buffer = buf
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800 + Math.random() * 3500; bp.Q.value = 6
+        const g = ctx.createGain(), t = ctx.currentTime
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 + Math.random() * 0.3, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
+        const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null
+        if (pan) { pan.pan.value = Math.random() * 2 - 1; n.connect(bp).connect(g).connect(pan).connect(master) } else n.connect(bp).connect(g).connect(master)
+        n.start(t, Math.random() * 3, 0.06)
+      }
+      setTimeout(drop, 25 + Math.random() * 120)
+    }
+    drop()
+  }
+  function apply() {
+    if (!ctx) { if (!on) return; try { build() } catch { return } }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+    master.gain.cancelScheduledValues(ctx.currentTime)
+    master.gain.setTargetAtTime(on ? 0.22 : 0, ctx.currentTime, 0.6)
+  }
+  btn.addEventListener('click', () => { on = !on; try { localStorage.setItem('rain', on ? 'on' : 'off') } catch {}; label(); apply() })
+  return { start: apply }
+})()
+
 function maybeStart() {
   if (!wantStart || !sceneReady || started) return
   started = true
   $('#boot').classList.add('gone')
   document.body.classList.add('on')
   powerOn()
+  rain.start()
   setTimeout(() => setPage(pageFromHash()), 1100)
 }
 
@@ -348,20 +391,39 @@ async function buildScene() {
     px(120, 36, '#3a1f22', 26, 14); px(118, 32, '#22191c', 30, 5); px(127, 40, '#ffc875', 4, 4); px(136, 40, '#ffc875', 4, 4); px(131, 44, '#140c0d', 5, 6)
     for (let x = 10; x < 112; x += 6) px(x, Math.floor(H * 0.62), '#5a4632', 1, 4); px(10, Math.floor(H * 0.63), '#5a4632', 102, 1)
   })
+  // desktop wallpaper: a rainy neon city at night
   const synth = ctex(1024, 448, (g, w, h) => {
-    const hz = h * 0.58
-    const sk = g.createLinearGradient(0, 0, 0, hz); sk.addColorStop(0, '#07041a'); sk.addColorStop(1, '#3b0f4a'); g.fillStyle = sk; g.fillRect(0, 0, w, hz)
-    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(255,255,255,${rnd() * 0.6})`; g.fillRect(rnd() * w, rnd() * hz * 0.7, 2, 2) }
-    const sg = g.createLinearGradient(0, hz - 170, 0, hz); sg.addColorStop(0, '#ffd36b'); sg.addColorStop(1, '#ff3fb4')
-    g.save(); g.beginPath(); g.arc(w / 2, hz, 150, Math.PI, 0); g.clip(); g.fillStyle = sg; g.fillRect(w / 2 - 150, hz - 150, 300, 150)
-    g.fillStyle = '#2a0b38'; for (let i = 0; i < 7; i++) g.fillRect(w / 2 - 150, hz - 60 + i * 9, 300, 2 + i * 0.8); g.restore()
-    let x = 0; g.fillStyle = '#0a0614'
-    while (x < w) { const bw = 20 + rnd() * 50, bh = 30 + rnd() * 110; if (x < w / 2 - 170 || x > w / 2 + 150) g.fillRect(x, hz - bh, bw, bh); x += bw + 2 }
-    g.fillStyle = '#05030a'; g.fillRect(0, hz, w, h - hz)
-    g.strokeStyle = '#3fe8ff'; g.shadowColor = '#3fe8ff'; g.shadowBlur = 8; g.lineWidth = 1.5
-    for (let i = 1; i < 12; i++) { const y = hz + (h - 30 - hz) * (i / 11) ** 2; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke() }
-    for (let i = -14; i <= 14; i++) { g.beginPath(); g.moveTo(w / 2 + i * 12, hz); g.lineTo(w / 2 + i * 110, h - 30); g.stroke() }
-    g.shadowBlur = 0
+    const sk = g.createLinearGradient(0, 0, 0, h); sk.addColorStop(0, '#05030f'); sk.addColorStop(0.55, '#1a0b33'); sk.addColorStop(1, '#3a0f3f')
+    g.fillStyle = sk; g.fillRect(0, 0, w, h)
+    const haze = g.createRadialGradient(w * 0.5, h * 0.75, 10, w * 0.5, h * 0.75, w * 0.6); haze.addColorStop(0, 'rgba(255,63,180,.35)'); haze.addColorStop(1, 'rgba(255,63,180,0)')
+    g.fillStyle = haze; g.fillRect(0, 0, w, h)
+    const layer = (n, minH, maxH, base, lit, signs) => {
+      let x = -20
+      while (x < w) {
+        const bw = 26 + rnd() * 70, bh = minH + rnd() * (maxH - minH), top = h - 30 - bh
+        g.fillStyle = base; g.fillRect(x, top, bw, bh)
+        if (rnd() < 0.3) g.fillRect(x + bw * 0.45, top - 30 - rnd() * 40, 3, 70)
+        for (let yy = top + 8; yy < h - 34; yy += 9) for (let xx = x + 4; xx < x + bw - 5; xx += 7) if (rnd() < lit) { g.fillStyle = rnd() < 0.6 ? 'rgba(255,190,140,.75)' : 'rgba(110,230,255,.7)'; g.fillRect(xx, yy, 3, 4) }
+        if (rnd() < signs) {
+          const c = ['#ff3fb4', '#3fe8ff', '#b26bff', '#ffd23f'][Math.floor(rnd() * 4)]
+          g.save(); g.fillStyle = c; g.shadowColor = c; g.shadowBlur = 16
+          if (rnd() < 0.5) g.fillRect(x + 3, top + 14 + rnd() * 40, 7, 40 + rnd() * 50)
+          else g.fillRect(x + 6, top + 10 + rnd() * 30, Math.max(14, bw - 14), 6)
+          g.restore()
+        }
+        x += bw + 3
+      }
+    }
+    layer(0, 120, 300, '#0e0820', 0.12, 0.25)
+    layer(1, 60, 200, '#080512', 0.2, 0.45)
+    // flying traffic streaks
+    for (let i = 0; i < 9; i++) { const y = 60 + rnd() * 160, x0 = rnd() * w; g.save(); g.strokeStyle = rnd() < 0.5 ? '#ff4fc8' : '#4ff0ff'; g.shadowColor = g.strokeStyle; g.shadowBlur = 10; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + 40 + rnd() * 60, y - 3); g.stroke(); g.restore() }
+    // rain
+    g.strokeStyle = 'rgba(180,200,255,.18)'; g.lineWidth = 1
+    for (let i = 0; i < 260; i++) { const x0 = rnd() * w, y0 = rnd() * h; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 - 4, y0 + 14); g.stroke() }
+    // wet street glow
+    const st = g.createLinearGradient(0, h - 40, 0, h - 30); st.addColorStop(0, 'rgba(63,232,255,.0)'); st.addColorStop(1, 'rgba(63,232,255,.35)')
+    g.fillStyle = st; g.fillRect(0, h - 40, w, 10)
     g.fillStyle = 'rgba(8,9,11,.88)'; g.fillRect(0, h - 30, w, 30)
     g.fillStyle = '#e9ecee'; g.font = '500 15px "Geist Mono", ui-monospace, monospace'; g.textBaseline = 'middle'
     g.fillText('emily@desk', 14, h - 15); g.textAlign = 'right'; g.fillText('1:07 AM', w - 14, h - 15)
@@ -482,7 +544,7 @@ async function buildScene() {
 
   /* ---- tennis racket + ball */
   const strings = ctex(256, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(225,228,232,.9)'; g.lineWidth = 2; for (let i = 8; i < w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke() } })
-  const racket = new THREE.Group(); racket.position.set(1.12, 0, 0.6); racket.rotation.set(0, -0.2, -0.16); scene.add(racket)
+  const racket = new THREE.Group(); racket.position.set(1.16, 0.615, 0.6); racket.rotation.set(0, -0.2, Math.PI - 0.16); scene.add(racket)
   add(racket, new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.016, 0.2, 12), std(0x1a1b1e, 0.9)), 0, 0.1, 0)
   for (const s of [-1, 1]) { const th = add(racket, new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 8), M.black), s * 0.028, 0.27, 0); th.rotation.z = -s * 0.33 }
   const head = add(racket, new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.011, 10, 48), std(0x111214, 0.35, 0.4)), 0, 0.47, 0); head.scale.set(1, 1.3, 1)

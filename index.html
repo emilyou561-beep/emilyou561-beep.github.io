@@ -44,14 +44,19 @@ nav a[aria-current=page]{color:#0b0c0e;background:var(--ink)}
 body.on.home .hint{opacity:.8}
 .back{position:fixed;right:max(2vw,14px);bottom:12px;z-index:22;font:13px var(--m);color:var(--mute);padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(8,9,10,.7);display:none;min-height:44px}
 body.in-page .back{display:block}
+.rainbtn{position:fixed;left:max(2vw,14px);bottom:12px;z-index:22;font:12px var(--m);color:var(--mute);padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:rgba(8,9,10,.6);min-height:40px;opacity:0;transition:opacity .8s,color .2s}
+body.on .rainbtn{opacity:1}
+.rainbtn:hover{color:var(--ink)}
+.rainbtn[aria-pressed=true]{color:#bdf6ff;border-color:rgba(79,240,255,.35)}
+body.flat .rainbtn{display:none}
 .back:hover{color:var(--ink)}
 
 /* tags pinned to objects on the overview */
 .tag{position:fixed;left:0;top:0;z-index:15;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;transition:opacity .4s}
 body.on.home .tag.show{opacity:1}
-.tag button{pointer-events:auto;font:500 13px var(--f);color:#0b0c0e;background:var(--ink);outline:1px solid rgba(255,79,200,.6);outline-offset:3px;padding:8px 14px;border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.5);white-space:nowrap;min-height:36px;transition:transform .2s}
-.tag button:hover{transform:translateY(-2px)}
-.tag span{width:1px;height:22px;background:linear-gradient(var(--ink),transparent)}
+.tag button{pointer-events:auto;font:500 12px var(--m);color:rgba(233,236,238,.82);background:rgba(10,8,18,.45);border:1px solid rgba(255,79,200,.45);backdrop-filter:blur(4px);padding:6px 11px;border-radius:999px;white-space:nowrap;min-height:30px;transition:color .2s,border-color .2s,box-shadow .2s;box-shadow:0 0 10px rgba(255,79,200,.18)}
+.tag button:hover{color:#fff;border-color:var(--neon);box-shadow:0 0 16px rgba(255,79,200,.5)}
+.tag span{width:1px;height:16px;background:linear-gradient(rgba(255,79,200,.6),transparent)}
 .tip{position:fixed;z-index:16;pointer-events:none;font:12px var(--m);color:var(--ink);background:rgba(8,9,10,.85);border:1px solid var(--line);padding:5px 9px;border-radius:6px;opacity:0;transition:opacity .15s;white-space:nowrap}
 .tip.show{opacity:1}
 
@@ -200,7 +205,7 @@ body.flat #about .journal{height:auto}
 <section class="page" id="about" aria-label="About"></section>
 
 <button class="back" id="back" data-go="home">← Back to the desk</button>
-<p class="hint" id="hint">Drag to look around · click things on the desk</p>
+<button class="rainbtn" id="rain" aria-pressed="true">Rain · on</button>
 
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo"><button class="ib" id="lbx" aria-label="Close">✕</button><figure><img id="lbimg" alt=""><figcaption id="lbcap"></figcaption></figure></div>
 <div class="toast" id="toast" role="status"></div>
