@@ -1,7 +1,7 @@
 // Emily Ou — a late-night desk.
 // The scene is modelled in code below; the words come from content.js.
 
-import * as C from './content.js?v=11'
+import * as C from './content.js?v=12'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -161,7 +161,7 @@ const bootTick = setInterval(() => {
 setInterval(() => { if (bootReady && !started) drawBoot(bootN) }, 300)
 function requestStart() { wantStart = true; maybeStart() }
 // coming back from the inner world: skip the boot screen
-if (/inner-world\//.test(document.referrer)) requestStart()
+if (/my-inner-world\//.test(document.referrer)) requestStart()
 $('#boot').addEventListener('click', requestStart)
 window.addEventListener('keydown', (e) => { if (!started && e.key !== 'Tab') requestStart() })
 
@@ -550,7 +550,7 @@ async function buildScene() {
   hit(sw, 'switch', '')
 
   /* ---- neon sign on the wall (neonArt.js) */
-  const { drawNeonSign } = await import('./neonArt.js?v=11')
+  const { drawNeonSign } = await import('./neonArt.js?v=12')
   const neonTex = ctex(1200, 800, drawNeonSign)
   const neon = new THREE.Group(); neon.position.set(-1.42, 1.78, 0.03); neon.scale.setScalar(1.25); scene.add(neon)
   add(neon, rbox(0.68, 0.46, 0.008, 0.003, new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.15, transparent: true, opacity: 0.35 })), 0, 0, -0.008)

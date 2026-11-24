@@ -1,1 +1,0 @@
-import{s as e}from"./style-MjI-JEDg.js";import{m as s}from"./world-BFuFx-jA.js";import"./snow-CdGjwuo5.js";s({index:"004",title:"THE CRESCENT",splat:"./worlds/scene-004.spz",height:.8,pitch:.08,snow:{radius:9,height:9,count:22e3,innerRadius:.4,size:.03,center:new e(0,4,0)},classic:"./classic-004.html",prev:{label:"SCENE 003",href:"./scene-003.html"}});
