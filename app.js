@@ -1,7 +1,7 @@
 // Emily Ou — a late-night desk.
 // The scene is modelled in code below; the words come from content.js.
 
-import * as C from './content.js?v=10'
+import * as C from './content.js?v=11'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -94,6 +94,18 @@ function go(p) {
 }
 window.addEventListener('hashchange', () => setPage(pageFromHash()))
 let onPage = () => {}
+
+/* ---- the door to my inner world (opened by the frame on the desk) */
+function openGate() { $('#gate').classList.add('show'); setTimeout(() => $('#gateYes').focus(), 50) }
+function closeGate() { $('#gate').classList.remove('show') }
+$('#gateNo').addEventListener('click', closeGate)
+$('#gate').addEventListener('click', (e) => { if (e.target.id === 'gate') closeGate() })
+window.addEventListener('pageshow', () => document.body.classList.remove('leaving'))
+$('#gateYes').addEventListener('click', (e) => {
+  e.preventDefault()
+  document.body.classList.add('leaving')
+  setTimeout(() => { location.href = $('#gateYes').getAttribute('href') }, 700)
+})
 function setPage(p) {
   if (!started) return
   page = p
@@ -114,7 +126,7 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'lb' || e.target.closest('#lbx')) closePhoto()
 })
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if ($('#lb').classList.contains('show')) closePhoto(); else if (page !== 'home') go('home') }
+  if (e.key === 'Escape') { if ($('#gate').classList.contains('show')) closeGate(); else if ($('#lb').classList.contains('show')) closePhoto(); else if (page !== 'home') go('home') }
   if (page === 'projects' && !e.target.closest('input,textarea')) {
     if (e.key === 'ArrowRight') stepProject(1)
     if (e.key === 'ArrowLeft') stepProject(-1)
@@ -148,6 +160,8 @@ const bootTick = setInterval(() => {
 }, 260)
 setInterval(() => { if (bootReady && !started) drawBoot(bootN) }, 300)
 function requestStart() { wantStart = true; maybeStart() }
+// coming back from the inner world: skip the boot screen
+if (/inner-world\//.test(document.referrer)) requestStart()
 $('#boot').addEventListener('click', requestStart)
 window.addEventListener('keydown', (e) => { if (!started && e.key !== 'Tab') requestStart() })
 
@@ -536,7 +550,7 @@ async function buildScene() {
   hit(sw, 'switch', '')
 
   /* ---- neon sign on the wall (neonArt.js) */
-  const { drawNeonSign } = await import('./neonArt.js?v=10')
+  const { drawNeonSign } = await import('./neonArt.js?v=11')
   const neonTex = ctex(1200, 800, drawNeonSign)
   const neon = new THREE.Group(); neon.position.set(-1.42, 1.78, 0.03); neon.scale.setScalar(1.25); scene.add(neon)
   add(neon, rbox(0.68, 0.46, 0.008, 0.003, new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.15, transparent: true, opacity: 0.35 })), 0, 0, -0.008)
@@ -545,6 +559,16 @@ async function buildScene() {
   add(neon, new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.427), neonMat), 0, 0, 0.002)
   const neonLight = lit(new THREE.RectAreaLight(0xff3fb4, 4, 0.6, 0.4)); neonLight.width = 0.75; neonLight.height = 0.5; neonLight.position.set(-1.42, 1.78, 0.05); neonLight.lookAt(-1.42, 1.7, 2); scene.add(neonLight)
   hit(neon, 'neon', '')
+
+  /* ---- a small framed picture on the desk: the door to my inner world */
+  const frameTex = texLoader.load('img/inner-world.jpg'); frameTex.colorSpace = THREE.SRGBColorSpace
+  const frame = new THREE.Group(); frame.position.set(-0.47, 0.75, 0.37); frame.rotation.y = 0.35; scene.add(frame)
+  const frameTilt = new THREE.Group(); frameTilt.rotation.x = -0.12; frame.add(frameTilt)
+  add(frameTilt, rbox(0.14, 0.175, 0.012, 0.003, std(0x0b0b0d, 0.35, 0.4)), 0, 0.0875, 0).castShadow = true
+  add(frameTilt, new THREE.Mesh(new THREE.PlaneGeometry(0.124, 0.159), std(0xe8e6e2, 0.9)), 0, 0.0875, 0.0062)
+  add(frameTilt, new THREE.Mesh(new THREE.PlaneGeometry(0.104, 0.13), glow(new THREE.MeshBasicMaterial({ map: frameTex, color: 0xd4d4d4 }))), 0, 0.0875, 0.0064)
+  const strut = add(frame, new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.004), M.black), 0, 0.07, -0.035); strut.rotation.x = 0.35
+  hit(frame, 'frame', '')
 
   /* ---- tennis racket + ball */
   const strings = ctex(256, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(225,228,232,.9)'; g.lineWidth = 2; for (let i = 8; i < w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke() } })
@@ -755,6 +779,7 @@ async function buildScene() {
     rain.click()
     if (k === 'photo') return page === 'about' ? openPhoto(o.userData.photo) : go('about')
     if (PAGES.includes(k)) return go(k)
+    if (k === 'frame' && page === 'home') return openGate()
     if (page !== 'home') return
     egg(k)
   })
