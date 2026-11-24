@@ -193,8 +193,8 @@ export const about = {
 export const photos = [
   { id: 'graduation', caption: 'Graduation day, UChicago' },
   { id: 'vegas-gp', caption: 'Las Vegas Grand Prix' },
-  { id: 'race-car', caption: 'Blink and you miss it' },
+  { id: 'race-car', caption: 'you got this!!!' },
   { id: 'film', caption: 'Shot on film' },
   { id: 'mirror', caption: 'Emily, take 2' },
-  { id: 'portrait', caption: 'Sunday, no plans' },
+  { id: 'portrait', caption: 'what\'re you looking at' },
 ]
